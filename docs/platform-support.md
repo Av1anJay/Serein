@@ -39,10 +39,13 @@ Native restart/resize behavior on Niri and other Linux desktops remains unverifi
 Target platforms are Windows, macOS and Linux. **macOS arm64, Windows x64 and Linux x64 have local build evidence.** The release workflow also targets Windows arm64 and Ubuntu 26.04 ARM64 on native GitHub Actions runners; build and runtime validation remain pending. macOS has native visual checks; Windows has offline tests and a process/window startup smoke check only. Minimum OS versions, other architectures, real screen-reader support and native login-method support are not certified.
 
 CI and release packaging also target Intel macOS (`x86_64-apple-darwin`) on the
-native `macos-15-intel` runner, alongside Apple Silicon on `macos-latest`. To build
+native `macos-26-intel` runner, alongside Apple Silicon on `macos-latest`. The
+current `apple-metal` dependency requires Xcode 26 / the macOS 26 SDK; the older
+macOS 15 runner's default SDK cannot compile its Swift bridge. This build-image
+requirement does not certify a minimum supported runtime macOS version. To build
 only Intel macOS without Apple signing credentials, manually run the
-`native-client` workflow with `platform: macos-15-intel` (or
-`gh workflow run ci.yml --ref <branch> -f platform=macos-15-intel`). This runs the
+`native-client` workflow with `platform: macos-26-intel` (or
+`gh workflow run ci.yml --ref <branch> -f platform=macos-26-intel`). This runs the
 native offline checks and release packaging, but skips unrelated SDK, audit,
 license and fuzz jobs. Its `serein-macOS-X64-unsigned` artifact contains a ZIP and
 SHA-256 checksum. Extract the inner ZIP to preserve the executable mode and bundle

@@ -9,7 +9,7 @@ on:
       platform:
         description: Build all platforms or only Intel macOS
         type: choice
-        options: [all, macos-15-intel]
+        options: [all, macos-26-intel]
         default: all
         required: true
 concurrency:
@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.platform == 'macos-15-intel' && '["macos-15-intel"]' || '["macos-latest", "macos-15-intel", "windows-latest", "windows-11-arm", "ubuntu-latest"]') }}
+        os: ${{ fromJSON(inputs.platform == 'macos-26-intel' && '["macos-26-intel"]' || '["macos-latest", "macos-26-intel", "windows-latest", "windows-11-arm", "ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -87,7 +87,7 @@ jobs:
           path: ${{ runner.os == 'macOS' && 'serein-*-unsigned.zip*' || 'dist/' }}
           if-no-files-found: error
   extension-sdk:
-    if: inputs.platform != 'macos-15-intel'
+    if: inputs.platform != 'macos-26-intel'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -127,7 +127,7 @@ jobs:
         run: cargo run --locked --release -p extensions --example sdk_check -- examples/extensions/target/wasm32-unknown-unknown/release extensions/target/wasm32-unknown-unknown/release
       - run: cargo run --locked --release -p extensions --example legacy_sdk_check
   security:
-    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: inputs.platform != 'macos-26-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -141,7 +141,7 @@ jobs:
       - run: cargo install cargo-audit --version 0.22.2 --locked --no-default-features
       - run: cargo audit --deny warnings
   licenses:
-    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: inputs.platform != 'macos-26-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -162,7 +162,7 @@ jobs:
           - run: cargo xtask licenses
           - run: bun tests/license-policy.cjs
   fuzz:
-    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: inputs.platform != 'macos-26-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

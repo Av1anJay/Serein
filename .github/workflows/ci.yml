@@ -5,6 +5,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Build all platforms or only Intel macOS
+        type: choice
+        options: [all, macos-15-intel]
+        default: all
+        required: true
 concurrency:
   group: native-client-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, windows-11-arm, ubuntu-latest]
+        os: ${{ fromJSON(inputs.platform == 'macos-15-intel' && '["macos-15-intel"]' || '["macos-latest", "macos-15-intel", "windows-latest", "windows-11-arm", "ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -63,12 +70,24 @@ jobs:
       - name: Package app without demo or developer features
         if: github.event_name != 'pull_request'
         run: cargo xtask package
+      - name: Verify and archive Mac package
+        if: github.event_name != 'pull_request' && runner.os == 'macOS'
+        env:
+          EXPECTED_ARCH: ${{ runner.arch == 'X64' && 'x86_64' || 'arm64' }}
+        run: |
+          test "$(lipo -archs dist/Serein.app/Contents/MacOS/serein)" = "$EXPECTED_ARCH"
+          codesign --verify --strict dist/Serein.app
+          archive="serein-$RUNNER_OS-$RUNNER_ARCH-unsigned.zip"
+          ditto -c -k --sequesterRsrc dist "$archive"
+          shasum -a 256 "$archive" > "$archive.sha256"
       - if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: serein-${{ runner.os }}-${{ runner.arch }}-unsigned
-          path: dist/
+          path: ${{ runner.os == 'macOS' && 'serein-*-unsigned.zip*' || 'dist/' }}
+          if-no-files-found: error
   extension-sdk:
+    if: inputs.platform != 'macos-15-intel'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -108,7 +127,7 @@ jobs:
         run: cargo run --locked --release -p extensions --example sdk_check -- examples/extensions/target/wasm32-unknown-unknown/release extensions/target/wasm32-unknown-unknown/release
       - run: cargo run --locked --release -p extensions --example legacy_sdk_check
   security:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -122,7 +141,7 @@ jobs:
       - run: cargo install cargo-audit --version 0.22.2 --locked --no-default-features
       - run: cargo audit --deny warnings
   licenses:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -143,7 +162,7 @@ jobs:
           - run: cargo xtask licenses
           - run: bun tests/license-policy.cjs
   fuzz:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: inputs.platform != 'macos-15-intel' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -12,6 +12,11 @@ on:
         options: [all, macos-26-intel]
         default: all
         required: true
+      checks:
+        description: Run offline checks and replay benchmarks before packaging
+        type: boolean
+        default: true
+        required: true
 concurrency:
   group: native-client-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -47,25 +52,31 @@ jobs:
           cache-on-failure: true
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check production build without development fixtures
+        if: github.event_name != 'workflow_dispatch' || inputs.checks
         run: cargo check --locked -p serein --bin serein --no-default-features
       - name: Check offline demo targets
+        if: github.event_name != 'workflow_dispatch' || inputs.checks
         run: cargo check --locked -p serein -p ui --all-targets --features serein/demo
       - name: Test offline typing with demo support
+        if: github.event_name != 'workflow_dispatch' || inputs.checks
         run: cargo test --locked -p serein -p ui -p client-core -p discord-api --features serein/demo --lib --bins typing
-      - run: cargo xtask check
+      - name: Offline workspace checks
+        if: github.event_name != 'workflow_dispatch' || inputs.checks
+        run: cargo xtask check
       - parallel:
           - name: Flatpak encoding after GTK initialization (synthetic)
             if: runner.os == 'Linux'
             run: xvfb-run -a cargo test --locked -p platform --features winit/x11,winit/wayland --lib flatpak_locale_tests::post_gtk_flatpak_encoding_preflight -- --exact --ignored
           - run: bun tests/login-handoff.cjs
           - run: bun tests/xtask-workspace.cjs
+            if: github.event_name != 'workflow_dispatch' || inputs.checks
           - name: Linux package regression
             if: runner.os == 'Linux'
             run: PYTHONDONTWRITEBYTECODE=1 python3 packaging/linux/test_package.py
       # Release builds run on main and on manual dispatch; pull requests stop at the checks above.
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.checks)
         run: cargo replay
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.checks)
         run: cargo replay --soak 5
       - name: Package app without demo or developer features
         if: github.event_name != 'pull_request'

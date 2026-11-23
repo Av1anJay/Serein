@@ -54,6 +54,15 @@ signature; the app is **not Developer ID signed or notarized**, and Intel runtim
 behavior remains unverified. The release workflow retains its existing required
 Developer ID signing and notarization for both Mac architectures.
 
+The manual `checks` input defaults to `true`, preserving offline checks and replay
+benchmarks. Set `-f checks=false` for an explicit packaging-only build; this still
+builds the locked production release and verifies its archive, but is **not a
+passing test-suite result**. The initial Intel CI run passed production/demo
+compilation, typing tests, formatting and Clippy, then failed the existing
+`hardware_decoder_round_trips_an_openh264_keyframe` test when VideoToolbox could
+not decode on the hosted Intel VM. Native hardware decoder behavior remains
+unverified; the regular PR/push checks are not bypassed by this manual option.
+
 Windows defaults to DirectX 12 to avoid reported startup access violations in Intel's
 Vulkan driver (`igvk64.dll`). The existing `WGPU_BACKEND` environment override remains
 available (for example, `dx12` or `vulkan`). Affected users confirmed that forcing
